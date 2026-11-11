@@ -94,3 +94,17 @@ kbd { background:rgba(93,226,255,0.1); border:1px solid var(--border); border-ra
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* v0.2: WebGL fallback background + resilience */
+#bg-canvas.bg-fallback {
+  background: radial-gradient(ellipse at 30% 20%, rgba(93,226,255,0.12), transparent 40%),
+              radial-gradient(ellipse at 70% 70%, rgba(167,139,255,0.12), transparent 40%),
+              radial-gradient(ellipse at 50% 50%, rgba(255,107,214,0.06), transparent 50%),
+              #070a12;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(93,226,255,0.08) 1px, transparent 1px);
+  background-size: 48px 48px; opacity: 0.25;
+}

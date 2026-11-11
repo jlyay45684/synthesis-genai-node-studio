@@ -1,49 +1,45 @@
-﻿# Performance Test Record
+﻿# Performance Test Record (v0.2)
 
 ## Baseline
-- Target consideration: low-end GPU/laptop and mobile-class devices; integrated GPUs.
-- Validation environment (this run): Node v22.22.0, npm 10.9.4, Vite production build.
+- Reference target: **GTX 1050 Ti 4GB** (and low-end/mobile). No FPS values marked PASS without measurement on target hardware.
 
 ## Quality Presets (background particles)
-
-| Preset | Particles | DPR cap | Target |
+| Preset | Particles | DPR cap | Notes |
 |---|---:|---:|---|
-| High | 9,000 | 1.25 | Smooth on capable GPUs |
-| Medium | 4,500 | 1.0 | Balanced default |
-| Low | 1,800 | 0.75 | Low-end/mobile |
+| High | 9,000 | 1.25 | Reached only via Auto after sustained >58 FPS |
+| Medium | 4,500 | 1.0 | **Auto initial** |
+| Low | 1,800 | 0.75 | Low-end/mobile fallback |
 
-Auto mode samples FPS and downgrades/upgrades with cooldown.
+## Auto Quality Policy (P2)
+- Start: **Medium**.
+- Upgrade to High: only if FPS > 58 sustained over stable sample window and cooldown elapsed (hysteresis).
+- Downgrade: if FPS < 45 (step down), with cooldown to avoid oscillation.
+- Background RAF pauses when tab hidden; resumes on visibility.
 
-## Build Validation
-- `npm run build`: **PASS**
-- Output (Vite 8.3.8): `dist/index.html` ~2.59 kB (gzip 1.00 kB), CSS ~5.58 kB (gzip 1.71 kB), JS ~681.42 kB (gzip 181.31 kB). Large chunk due to Three.js; acceptable for demo (no node 3D meshes).
+## Build / Test Validation (this environment)
+- `npm ci`: PASS (dependencies installed)
+- `npm run build`: **PASS** (Vite 8.3.8). Output: `index.html` 3.56 kB gzip 1.37 kB, CSS 8.02 kB gzip 2.48 kB, app JS 105.07 kB gzip 38.86 kB, **Three.js chunk 742.88 kB gzip 187.81 kB** (dynamically imported; separate from initial app chunk; chunk warning expected).
+- `npm test`: **PASS** — 3 files, 14 tests (validation/safety/round-trip/atomic import, inspector live input & history behavior, SVG-safe rendering, topo sort/cycles).
 
-## Design Measures
-- [x] Three.js limited to background particles (BufferGeometry Points)
-- [x] Nodes are DOM; links are SVG (single layer)
-- [x] No per-link animation loop; GSAP tweens only during run
-- [x] No per-frame allocations in background hot path
-- [x] DPR/particle adaptation + manual quality selector + FPS monitor
-- [x] Pauses rendering work when tab hidden (`visibilitychange`)
-- [x] `prefers-reduced-motion` support
-- [x] RWD layout (stacked on narrow screens)
+## Runtime / Device Observations
+> **Not measured on GTX 1050 Ti 4GB in this run — do not mark FPS PASS.**
 
-## Runtime Observations
-> Capture on target hardware/browsers:
-
-| Device/Browser | Quality | Avg FPS | Notes |
+| Device/Browser | Quality | Avg FPS | Status |
 |---|---|---:|---|
-| Desktop (target) | Auto/High | _TBD_ |  |
-| Low-end / integrated | Auto/Low | _TBD_ |  |
-| Mobile | Low | _TBD_ |  |
+| GTX 1050 Ti 4GB (target) | Auto/Med/High | _TBD_ | **UNMEASURED** |
+| Low-end / integrated | Auto/Low | _TBD_ | **UNMEASURED** |
+| Mobile | Low | _TBD_ | **UNMEASURED** |
+
+## Manual Verification Checklist
+- [ ] Continuous text input in Inspector preserves cursor/caret (live, no DOM rebuild) — covered by automated test; manual confirm recommended.
+- [ ] JSON export → import restores workflow (round-trip) — covered by automated test.
+- [ ] WebGL unavailable/lost: editor remains operable with CSS fallback — logic implemented & handled; manual confirm recommended.
+- [ ] Cycle detection blocks run with message — covered by automated test.
 
 ## Simulation Compliance
-- [x] Run/preview labeled **Simulation/Simulated** in UI and docs
-- [x] No ComfyUI connection, no real model execution
-
-## JSON Round-trip
-- [x] Export/import implemented (schema `synthesis-workflow-sim`); presets load/exportable. Manual round-trip verification recommended in browser.
+- [x] All execution/preview labeled Simulation; no ComfyUI, no real model.
 
 ## Sign-off
 - Build: PASS
-- Manual interactive/FPS/device capture: _pending target-device run_
+- Tests/CI logic: PASS locally
+- Target-device FPS: **NOT MEASURED / NOT PASS**

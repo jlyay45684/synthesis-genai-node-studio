@@ -1,8 +1,10 @@
 ﻿import { NODE_TYPES } from '../presets/presets.js';
 import gsap from 'gsap';
+import { validateWorkflow, sanitizeData, KIND, VERSION } from './validate.js';
 
 let nextId = 1;
 const uid = () => 'n' + (nextId++);
+const SVGNS = 'http://www.w3.org/2000/svg';
 
 export class Editor {
   constructor({ worldEl, nodesEl, svgEl, onChange, onSelect }) {
@@ -15,33 +17,36 @@ export class Editor {
     this.pending = null;
     this.drag = null;
     this.history = []; this.future = []; this.suspend = 0;
+    this._onPendMove = null; this._onPendUp = null;
     this.setupSvg();
     this.updateTransform();
   }
 
   setupSvg() {
-    this.svgEl.innerHTML = `<defs>
-      <linearGradient id="grad-link" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#5de2ff"/><stop offset="50%" stop-color="#a78bff"/><stop offset="100%" stop-color="#ff6bd6"/>
-      </linearGradient>
-    </defs><g id="links-layer"></g><path id="pending-path" class="pending" d=""></path><g id="flow-layer"></g>`;
-    this.linksLayer = this.svgEl.querySelector('#links-layer');
-    this.flowLayer = this.svgEl.querySelector('#flow-layer');
-    this.pendingPath = this.svgEl.querySelector('#pending-path');
+    this.svgEl.replaceChildren();
+    const defs = document.createElementNS(SVGNS,'defs');
+    const grad = document.createElementNS(SVGNS,'linearGradient');
+    grad.setAttribute('id','grad-link'); grad.setAttribute('x1','0%'); grad.setAttribute('y1','0%'); grad.setAttribute('x2','100%'); grad.setAttribute('y2','0%');
+    [['0%','#5de2ff'],['50%','#a78bff'],['100%','#ff6bd6']].forEach(([o,c])=>{ const s=document.createElementNS(SVGNS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); grad.appendChild(s); });
+    defs.appendChild(grad);
+    this.linksLayer = document.createElementNS(SVGNS,'g'); this.linksLayer.setAttribute('id','links-layer');
+    this.pendingPath = document.createElementNS(SVGNS,'path'); this.pendingPath.setAttribute('id','pending-path'); this.pendingPath.setAttribute('class','pending'); this.pendingPath.setAttribute('d','');
+    this.flowLayer = document.createElementNS(SVGNS,'g'); this.flowLayer.setAttribute('id','flow-layer');
+    this.svgEl.append(defs, this.linksLayer, this.pendingPath, this.flowLayer);
   }
 
-  snapshot() { return JSON.stringify({ nodes: [...this.nodes.values()].map(n=>({id:n.id,type:n.type,x:n.x,y:n.y,data:n.data})), links: this.links, nextId }); }
+  snapshot() { return JSON.stringify({ nodes: [...this.nodes.values()].map(n=>({id:n.id,type:n.type,x:n.x,y:n.y,data:{...n.data}})), links: this.links.map(l=>({...l})), nextId }); }
   restore(snap) {
     const data = JSON.parse(snap);
     this.nodesEl.innerHTML=''; this.nodes.clear(); this.links=[]; this.selected=null;
     nextId = data.nextId || 1;
     data.nodes.forEach(n => this._createNode(n.type, n.x, n.y, n.data, n.id));
-    data.links.forEach(l => this.links.push({...l}));
+    this.links = (data.links||[]).map(l => ({...l}));
     this.renderLinks();
     this.onSelect?.(null);
     this.onChange?.();
   }
-  commit() { if (this.suspend) return; this.history.push(this.snapshot()); if (this.history.length>80) this.history.shift(); this.future=[]; this.onChange?.(); }
+  commit() { if (this.suspend) return; this.history.push(this.snapshot()); if (this.history.length>100) this.history.shift(); this.future=[]; this.onChange?.(); }
   beginBatch(){ this.suspend++; }
   endBatch(commitNow=true){ this.suspend=Math.max(0,this.suspend-1); if(!this.suspend && commitNow) this.commit(); }
   undo(){ if(!this.history.length) return; this.future.push(this.snapshot()); this.restore(this.history.pop()); }
@@ -49,8 +54,7 @@ export class Editor {
 
   addNode(type, x=120, y=120, dataOverride, silent=false) {
     const def = NODE_TYPES[type]; if(!def) return null;
-    const data = {}; def.fields.forEach(f=> data[f.k]=f.def);
-    if (dataOverride) Object.assign(data, dataOverride);
+    const data = sanitizeData(type, dataOverride || {});
     const node = this._createNode(type, x, y, data);
     if (!silent) this.commit();
     return node;
@@ -60,14 +64,14 @@ export class Editor {
     const el = document.createElement('div');
     el.className = 'node'; el.dataset.id = nid; el.style.left = x+'px'; el.style.top = y+'px';
     el.innerHTML = `
-      <div class="node-head"><span><span class="ntype">${def.cat.toUpperCase()}</span><br>${def.title}</span><button class="del" title="Delete node">×</button></div>
+      <div class="node-head"><span><span class="ntype">${def.cat.toUpperCase()}</span><br>${this._esc(def.title)}</span><button class="del" title="Delete node">×</button></div>
       <div class="ports">
-        <div class="ports-col in">${def.inputs.map(p=>`<div class="port in" data-port="${p.id}" data-dir="in"><span class="port-dot in"></span><span>${p.label}</span></div>`).join('')}</div>
-        <div class="ports-col out">${def.outputs.map(p=>`<div class="port out" data-port="${p.id}" data-dir="out"><span>${p.label}</span><span class="port-dot out"></span></div>`).join('')}</div>
+        <div class="ports-col in">${def.inputs.map(p=>`<div class="port in" data-port="${p.id}" data-dir="in"><span class="port-dot in"></span><span>${this._esc(p.label)}</span></div>`).join('')}</div>
+        <div class="ports-col out">${def.outputs.map(p=>`<div class="port out" data-port="${p.id}" data-dir="out"><span>${this._esc(p.label)}</span><span class="port-dot out"></span></div>`).join('')}</div>
       </div>
       <div class="node-body">${this._fieldsHtml(def, data)}</div>`;
     this.nodesEl.appendChild(el);
-    const node = { id:nid, type, x, y, data:{...data}, el, def };
+    const node = { id:nid, type, x, y, data:{...sanitizeData(type,data)}, el, def };
     this.nodes.set(nid, node);
     this.bindNode(node);
     return node;
@@ -75,12 +79,12 @@ export class Editor {
   _fieldsHtml(def, data) {
     return def.fields.map(f=>{
       const v = data[f.k] ?? f.def;
-      if (f.type==='textarea') return `<label>${f.label}<textarea data-k="${f.k}">${this._esc(v)}</textarea></label>`;
-      if (f.type==='select') return `<label>${f.label}<select data-k="${f.k}">${f.options.map(o=>`<option value="${o}" ${o==v?'selected':''}>${o}</option>`).join('')}</select></label>`;
-      return `<label>${f.label}<input data-k="${f.k}" type="${f.type||'text'}" value="${this._esc(v)}" ${f.min!=null?`min="${f.min}"`:''} ${f.max!=null?`max="${f.max}"`:''} ${f.step!=null?`step="${f.step}"`:''}></label>`;
+      if (f.type==='textarea') return `<label>${this._esc(f.label)}<textarea data-k="${f.k}">${this._esc(v)}</textarea></label>`;
+      if (f.type==='select') return `<label>${this._esc(f.label)}<select data-k="${f.k}">${f.options.map(o=>`<option value="${this._esc(o)}" ${o==v?'selected':''}>${this._esc(o)}</option>`).join('')}</select></label>`;
+      return `<label>${this._esc(f.label)}<input data-k="${f.k}" type="${f.type||'text'}" value="${this._esc(v)}" ${f.min!=null?`min="${f.min}"`:''} ${f.max!=null?`max="${f.max}"`:''} ${f.step!=null?`step="${f.step}"`:''}></label>`;
     }).join('');
   }
-  _esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+  _esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   bindNode(node) {
     const head = node.el.querySelector('.node-head');
@@ -118,9 +122,24 @@ export class Editor {
       });
     });
     node.el.querySelectorAll('[data-k]').forEach(inp => {
-      inp.addEventListener('change', () => { node.data[inp.dataset.k] = inp.type==='number'? Number(inp.value): inp.value; this.commit(); if(this.selected===node.id) this.onSelect?.(node); });
-      inp.addEventListener('input', () => { node.data[inp.dataset.k] = inp.type==='number'? Number(inp.value): inp.value; if(this.selected===node.id) this.onSelect?.(node,'live'); });
+      inp.addEventListener('change', () => { this._applyField(node, inp, true); });
+      inp.addEventListener('input', () => { this._applyField(node, inp, false); });
     });
+  }
+  _applyField(node, inp, commitNow) {
+    const k = inp.dataset.k;
+    node.data[k] = inp.type==='number'? Number(inp.value): inp.value;
+    if (this.selected === node.id) {
+      this.onSelect?.(node, commitNow ? 'commit' : 'live');
+    } else if (commitNow) {
+      // still commit history for non-selected edits (rare)
+    }
+    if (commitNow) this.commit();
+  }
+  syncInspectorField(nodeId, key, value) {
+    const node = this.nodes.get(nodeId); if(!node) return;
+    const inp = node.el.querySelector(`[data-k="${key}"]`);
+    if (inp && inp.value !== String(value)) inp.value = value;
   }
 
   _startPending() {
@@ -133,6 +152,7 @@ export class Editor {
     const node = this.nodes.get(nodeId); if(!node) return {x:0,y:0};
     const dot = node.el.querySelector(`.port.${dir}[data-port="${portId}"] .port-dot`); if(!dot) return {x:node.x,y:node.y};
     const r = dot.getBoundingClientRect(); const wr = this.worldEl.getBoundingClientRect();
+    if (!wr.width || !wr.height) return {x:node.x,y:node.y};
     return { x: (r.left + r.width/2 - wr.left) / this.scale, y: (r.top + r.height/2 - wr.top) / this.scale };
   }
   updatePending(cx, cy) {
@@ -143,15 +163,18 @@ export class Editor {
     this.pendingPath.setAttribute('d', this.curve(p1, {x,y}));
   }
   finishPending(ev) {
-    window.removeEventListener('pointermove', this._onPendMove);
-    window.removeEventListener('pointerup', this._onPendUp);
+    if (this._onPendMove) window.removeEventListener('pointermove', this._onPendMove);
+    if (this._onPendUp) window.removeEventListener('pointerup', this._onPendUp);
     const target = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.port.in');
     if (target && this.pending) {
       const nodeEl = target.closest('.node'); const toNode = nodeEl?.dataset.id; const toPort = target.dataset.port;
-      if (toNode) {
-        this.links = this.links.filter(l=>!(l.toNode===toNode && l.toPort===toPort));
-        this.links.push({ fromNode:this.pending.fromNode, fromPort:this.pending.fromPort, toNode, toPort, id: 'l'+Math.random().toString(36).slice(2,8) });
-        this.commit();
+      if (toNode && this.nodes.has(toNode) && this.nodes.has(this.pending.fromNode)) {
+        const toDef = this.nodes.get(toNode).def;
+        if (toDef.inputs.some(p=>p.id===toPort)) {
+          this.links = this.links.filter(l=>!(l.toNode===toNode && l.toPort===toPort));
+          this.links.push({ fromNode:this.pending.fromNode, fromPort:this.pending.fromPort, toNode, toPort, id: 'l'+Math.random().toString(36).slice(2,8) });
+          this.commit();
+        }
       }
     }
     this.pending=null; this.pendingPath.setAttribute('d',''); this.renderLinks();
@@ -159,24 +182,31 @@ export class Editor {
 
   curve(a,b){ const dx = Math.max(60, Math.abs(b.x-a.x)*0.5); return `M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`; }
   renderLinks() {
-    this.linksLayer.innerHTML = this.links.map(l=>{
+    // safe: no untrusted IDs in HTML strings
+    while (this.linksLayer.firstChild) this.linksLayer.removeChild(this.linksLayer.firstChild);
+    for (const l of this.links) {
+      if (!this.nodes.has(l.fromNode) || !this.nodes.has(l.toNode)) continue;
       const a=this.portPos(l.fromNode,l.fromPort,'out'), b=this.portPos(l.toNode,l.toPort,'in');
-      return `<path class="link" data-id="${l.id}" d="${this.curve(a,b)}"></path>`;
-    }).join('');
+      const p = document.createElementNS(SVGNS,'path');
+      p.setAttribute('class','link');
+      p.setAttribute('data-id', String(l.id));
+      p.setAttribute('d', this.curve(a,b));
+      this.linksLayer.appendChild(p);
+    }
   }
 
   select(id) {
     if (this.selected && this.nodes.get(this.selected)) this.nodes.get(this.selected).el.classList.remove('selected');
     this.selected = id;
-    if (id && this.nodes.get(id)) { this.nodes.get(id).el.classList.add('selected'); this.onSelect?.(this.nodes.get(id)); }
-    else this.onSelect?.(null);
+    if (id && this.nodes.get(id)) { this.nodes.get(id).el.classList.add('selected'); this.onSelect?.(this.nodes.get(id), 'select'); }
+    else this.onSelect?.(null, 'select');
   }
   removeNode(id) {
     if (!this.nodes.has(id)) return;
     this.links = this.links.filter(l=>l.fromNode!==id && l.toNode!==id);
     this.nodes.get(id).el.remove(); this.nodes.delete(id);
     if (this.selected===id) this.selected=null;
-    this.renderLinks(); this.commit(); this.onSelect?.(null);
+    this.renderLinks(); this.commit(); this.onSelect?.(null, 'select');
   }
   deleteSelected() { if (this.selected) this.removeNode(this.selected); }
 
@@ -184,7 +214,7 @@ export class Editor {
   setPan(x,y){ this.pan.x=x; this.pan.y=y; this.updateTransform(); }
   setScale(s, cx, cy){ const ns=Math.min(2.2,Math.max(0.25,s)); if(cx!=null){ const wx=(cx-this.pan.x)/this.scale, wy=(cy-this.pan.y)/this.scale; this.pan.x=cx-wx*ns; this.pan.y=cy-wy*ns; } this.scale=ns; this.updateTransform(); }
 
-  clear(){ this.nodesEl.innerHTML=''; this.nodes.clear(); this.links=[]; this.selected=null; nextId=1; this.renderLinks(); this.commit(); this.onSelect?.(null); }
+  clear(){ this.nodesEl.innerHTML=''; this.nodes.clear(); this.links=[]; this.selected=null; nextId=1; this.renderLinks(); this.commit(); this.onSelect?.(null, 'select'); }
   loadPreset(preset) {
     this.beginBatch();
     this.nodesEl.innerHTML=''; this.nodes.clear(); this.links=[]; this.selected=null; nextId=1;
@@ -194,20 +224,53 @@ export class Editor {
     this.renderLinks();
     this.endBatch(false);
     this.history=[]; this.future=[]; this.commit();
-    this.onSelect?.(null);
+    this.onSelect?.(null, 'select');
   }
 
-  exportJSON() { return JSON.stringify({ version:1, kind:'synthesis-workflow-sim', exportedAt:new Date().toISOString(), ...JSON.parse(this.snapshot()) }, null, 2); }
-  importJSON(text) { const data=JSON.parse(text); if(!data || !Array.isArray(data.nodes)) throw new Error('Invalid workflow'); this.restore(JSON.stringify({nodes:data.nodes,links:data.links||[],nextId:data.nextId||1})); this.commit(); }
+  exportJSON() { return JSON.stringify({ version:VERSION, kind:KIND, exportedAt:new Date().toISOString(), ...JSON.parse(this.snapshot()) }, null, 2); }
+  importJSON(text) {
+    const res = validateWorkflow(text);
+    if (!res.ok) throw new Error(res.error || 'Invalid workflow');
+    // atomic: replace only after full validation success
+    const snap = JSON.stringify({ nodes: res.value.nodes, links: res.value.links, nextId: res.value.nextId });
+    this.restore(snap);
+    this.history=[]; this.future=[]; this.commit();
+    return res.value;
+  }
+
+  topologicalOrder() {
+    const ids = [...this.nodes.keys()];
+    const indeg = new Map(ids.map(id=>[id,0]));
+    const adj = new Map(ids.map(id=>[id,[]]));
+    for (const l of this.links) {
+      if (!indeg.has(l.fromNode) || !indeg.has(l.toNode)) continue;
+      indeg.set(l.toNode, indeg.get(l.toNode)+1);
+      adj.get(l.fromNode).push(l.toNode);
+    }
+    const q = ids.filter(id=>indeg.get(id)===0);
+    q.sort(); // stable-ish
+    const out = [];
+    while (q.length) {
+      const id = q.shift();
+      out.push(id);
+      for (const nb of adj.get(id) || []) {
+        indeg.set(nb, indeg.get(nb)-1);
+        if (indeg.get(nb)===0) q.push(nb);
+      }
+    }
+    if (out.length !== ids.length) return { order: null, cycle: true };
+    return { order: out.map(id=>this.nodes.get(id)).filter(Boolean), cycle: false };
+  }
 
   async runSimulation(onPreview) {
-    const order = [...this.nodes.values()];
-    this.nodes.forEach(n=>n.el.classList.remove('running','done'));
+    const { order, cycle } = this.topologicalOrder();
+    if (cycle) throw new Error('CYCLE');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.nodes.forEach(n=>n.el.classList.remove('running','done'));
     for (const n of order) {
       n.el.classList.add('running');
       await this.pulseLinksFrom(n.id);
-      await new Promise(r=>setTimeout(r, reduced?60:240));
+      await new Promise(r=>setTimeout(r, reduced?60:220));
       n.el.classList.remove('running'); n.el.classList.add('done');
     }
     if (onPreview) onPreview(this.makePreview());
@@ -219,13 +282,14 @@ export class Editor {
   }
   animateFlow(l) {
     return new Promise(res=>{
-      const path = this.linksLayer.querySelector(`[data-id="${l.id}"]`);
+      const path = this.linksLayer.querySelector(`[data-id="${CSS.escape(String(l.id))}"]`);
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if(!path || reduced){ res(); return; }
-      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      const dot = document.createElementNS(SVGNS,'circle');
       dot.setAttribute('r','4'); dot.setAttribute('class','flow-dot'); this.flowLayer.appendChild(dot);
-      const len = path.getTotalLength(); const obj={t:0};
+      const len = path.getTotalLength ? path.getTotalLength() : 0; const obj={t:0};
       gsap.to(obj,{t:1,duration:0.4,ease:'power1.inOut',onUpdate:()=>{
+        if (!path.getPointAtLength) return;
         const p=path.getPointAtLength(obj.t*len); dot.setAttribute('cx',p.x); dot.setAttribute('cy',p.y);
       }, onComplete:()=>{ dot.remove(); res(); }});
     });
@@ -234,7 +298,7 @@ export class Editor {
     const seedNode = [...this.nodes.values()].find(n=>n.type==='ksampler');
     const seed = seedNode?.data?.seed ?? 1;
     const w=320,h=200; const c=document.createElement('canvas'); c.width=w; c.height=h; const ctx=c.getContext('2d');
-    let x=Number(seed)%9973; const rnd=()=>{ x=(x*1664525+1013904223)%4294967296; return x/4294967296; };
+    let x=Math.abs(Number(seed))%9973 + 1; const rnd=()=>{ x=(x*1664525+1013904223)%4294967296; return x/4294967296; };
     const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#07101d'); g.addColorStop(0.5,`hsl(${180+rnd()*80},70%,${25+rnd()*20}%)`); g.addColorStop(1,'#140a24'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
     for(let i=0;i<70;i++){ ctx.fillStyle=`hsla(${170+rnd()*140},90%,65%,${0.06+rnd()*0.18})`; ctx.beginPath(); ctx.arc(rnd()*w,rnd()*h,8+rnd()*55,0,Math.PI*2); ctx.fill(); }
     ctx.fillStyle='rgba(234,244,255,0.88)'; ctx.font='bold 14px system-ui'; ctx.fillText('SIMULATED PREVIEW',14,24);
