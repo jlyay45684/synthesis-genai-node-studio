@@ -1,9 +1,10 @@
-﻿import { defineConfig } from 'vite'
+﻿import { defineConfig } from "vite";
 export default defineConfig({
-  base: './',
-  build: { target: 'es2020' },
+  base: "./",
+  build: { target: "es2020" },
   test: {
-    environment: 'jsdom',
+    environment: "jsdom",
     globals: true,
-  }
-})
+    setupFiles: ["./src/test-setup.js"],
+  },
+});

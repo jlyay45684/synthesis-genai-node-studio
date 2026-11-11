@@ -7,12 +7,13 @@ High-end GenAI visual workstation concept combining ComfyUI-style node editing, 
 ## Live Demo
 - GitHub Pages (after merge to `main` with Pages source = GitHub Actions): https://jlyay45684.github.io/synthesis-genai-node-studio/
 
-## v0.2 Quality Hardening (PR #1)
-- **Inspector (P1):** live parameter edits update values without rebuilding inspector DOM (preserves focus/caret/continuous typing); committed changes update history; undo/redo restores values.
-- **JSON Import Safety (P1):** strict validation of `kind`/`version`, node types/IDs/coords/fields, link endpoints/ports, duplicate IDs/inputs, and size limits; sanitized data; **atomic import** (existing workflow unchanged on failure). SVG links rendered via `createElementNS`/`setAttribute` (no untrusted IDs in `innerHTML`). Malicious/invalid JSON test cases included.
-- **WebGL Fallback (P1):** `WebGLRenderer` init guarded with try/catch; CSS fallback background if WebGL unavailable; `webglcontextlost` handled and background can reinitialize on restore. **DOM node editor remains fully operable without WebGL.**
-- **Performance (P2):** Three.js background dynamically imported (reduced first-paint blocking). Auto quality **starts at Medium**; downgrade below ~45 FPS; upgrade above ~58 FPS only after sustained stable window with cooldown/hysteresis (no oscillation). RAF stops when tab hidden and resumes on visibility.
-- **Workflow Correctness (P2):** run uses topological sort by dependencies; cycle detection blocks execution with clear message; invalid links rejected on import.
+## v0.3 Quality Hardening (PR #1)
+- **Undo/Redo (P1):** Refactored history with `beginOp/endOp`, `beginBatch/endBatch`; single undo step per user action; covers add/delete/move/param-edit; batch ops (presets) produce one history entry.
+- **Node Port Type Safety (P1):** Explicit port types (MODEL, CLIP, VAE, CONDITIONING, LATENT, IMAGE) on all nodes; connection-time and import-time type checking; incompatible links rejected with clear error; presets validated.
+- **Link ID Integrity (P1):** Unique link IDs enforced on import; duplicate IDs rejected; SVG rendering uses `createElementNS`/`setAttribute` for safe attribute binding.
+- **WebGL Lifecycle (P1):** Dynamic Three.js import; `webglcontextlost`/`webglcontextrestored` handlers registered once; single RAF loop; CSS fallback background on failure; editor remains fully operable.
+- **Performance (P2):** Auto starts at **Medium**; downgrade <45 FPS; upgrade >58 FPS only after stable window + cooldown (hysteresis); RAF pauses on `visibilitychange`; dynamic Three.js import reduces initial blocking.
+- **Workflow Correctness (P2):** Execution via topological sort; cycle detection blocks run; invalid links rejected on import without corrupting existing workflow.
 
 ## Features
 - DOM nodes + SVG Bézier connections (single SVG layer). Nodes: Checkpoint Loader, Positive Prompt, Negative Prompt, LoRA Loader, CLIP Text Encode, Empty Latent Image, KSampler, VAE Decode, Output Preview.
@@ -21,7 +22,7 @@ High-end GenAI visual workstation concept combining ComfyUI-style node editing, 
 
 ## CI / Tests
 - PR CI (`.github/workflows/ci.yml`, not Pages): `npm ci`, `npm run build`, `npm test` (Vitest + jsdom).
-- Coverage: JSON validation/sanitization/limits/injection cases, import/export round-trip + atomic failure, inspector live-input behavior (no DOM rebuild, commit, undo restore), SVG-safe link rendering, topo sort/cycle detection.
+- Coverage: JSON validation/sanitization/limits/injection, import/export round-trip + atomic failure, inspector live-input behavior, SVG-safe link rendering, topo sort/cycles, port type compatibility, link ID uniqueness, undo/redo integration.
 
 ## Development
 ```bash
