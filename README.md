@@ -1,40 +1,51 @@
-﻿# SYNTHESIS — GenAI Node Studio (Simulation)
+﻿# SYNTHESIS — GenAI 節點工作站 (模擬)
 
-High-end GenAI visual workstation concept combining ComfyUI-style node editing, a low-density Three.js particle background, and a futuristic glass UI.
+結合 ComfyUI 風格節點編輯、Three.js 粒子背景與未來感玻璃介面的高階 GenAI 視覺工作站概念。
 
-> **Simulation Notice:** Image generation and workflow execution are **explicitly simulated previews**. This project does **not** connect to ComfyUI and does **not** execute real AI models.
+> **模擬聲明：** 圖像生成與工作流執行為**明確標示的模擬預覽**。本專案**不連接 ComfyUI**，**不執行真實 AI 模型**。
 
-## Live Demo
-- GitHub Pages (after merge to `main` with Pages source = GitHub Actions): https://jlyay45684.github.io/synthesis-genai-node-studio/
+## 線上展示
+- GitHub Pages (合併至 `main` 且 Pages 來源設為 GitHub Actions 後)：https://jlyay45684.github.io/synthesis-genai-node-studio/
 
-## v0.3 Quality Hardening (PR #1)
-- **Undo/Redo (P1):** Refactored history with `beginOp/endOp`, `beginBatch/endBatch`; single undo step per user action; covers add/delete/move/param-edit; batch ops (presets) produce one history entry.
-- **Node Port Type Safety (P1):** Explicit port types (MODEL, CLIP, VAE, CONDITIONING, LATENT, IMAGE) on all nodes; connection-time and import-time type checking; incompatible links rejected with clear error; presets validated.
-- **Link ID Integrity (P1):** Unique link IDs enforced on import; duplicate IDs rejected; SVG rendering uses `createElementNS`/`setAttribute` for safe attribute binding.
-- **WebGL Lifecycle (P1):** Dynamic Three.js import; `webglcontextlost`/`webglcontextrestored` handlers registered once; single RAF loop; CSS fallback background on failure; editor remains fully operable.
-- **Performance (P2):** Auto starts at **Medium**; downgrade <45 FPS; upgrade >58 FPS only after stable window + cooldown (hysteresis); RAF pauses on `visibilitychange`; dynamic Three.js import reduces initial blocking.
-- **Workflow Correctness (P2):** Execution via topological sort; cycle detection blocks run; invalid links rejected on import without corrupting existing workflow.
+## v0.3 品質強化 (PR #1)
+- **復原/重做 (P1)**  
+  重構歷史機制：`beginOp/endOp`、`beginBatch/endBatch`、`commit`；單次使用者操作對應一步歷史；批次操作 (預設) 產生單一步驟。涵蓋：新增/刪除/移動節點、參數編輯。新增整合測試 (`src/editor/__tests__/integration.test.js`)。
 
-## Features
-- DOM nodes + SVG Bézier connections (single SVG layer). Nodes: Checkpoint Loader, Positive Prompt, Negative Prompt, LoRA Loader, CLIP Text Encode, Empty Latent Image, KSampler, VAE Decode, Output Preview.
-- Drag/add/delete, connect/rewire/replace input links, pan/zoom, selection & inspector, run animation with flow pulses, presets (FLUX/SDXL/SD 1.5), Seed/Steps/CFG, JSON import/export, local save/load, undo/redo.
-- FPS monitor, quality selector (Auto/High/Medium/Low), `prefers-reduced-motion`, RWD, keyboard shortcuts.
+- **節點埠型別安全 (P1)**  
+  所有輸入/輸出埠具備明確型別：MODEL、CLIP、VAE、CONDITIONING、LATENT、IMAGE。連線時與 JSON 匯入皆執行型別檢查，不相容連線拒絕並給出錯誤。FLUX/SDXL/SD1.5 預設通過驗證。測試：`src/editor/__tests__/port-types.test.js`。
 
-## CI / Tests
-- PR CI (`.github/workflows/ci.yml`, not Pages): `npm ci`, `npm run build`, `npm test` (Vitest + jsdom).
-- Coverage: JSON validation/sanitization/limits/injection, import/export round-trip + atomic failure, inspector live-input behavior, SVG-safe link rendering, topo sort/cycles, port type compatibility, link ID uniqueness, undo/redo integration.
+- **連線 ID 完整性 (P1)**  
+  匯入時檢查 ID 唯一性，重複拒絕。SVG 渲染改用 `createElementNS` + `setAttribute`，避免不可信 ID 注入。測試：port-types.test.js (Link ID Uniqueness)。
 
-## Development
+- **WebGL 生命週期 (P1)**  
+  Three.js 動態載入 (`import("three")`)；`webglcontextlost` / `webglcontextrestored` 各註冊一次；單一 RAF 循環；context lost 降級 CSS 背景；restored 可重新初始化。編輯器在無 WebGL 時仍可完整操作。測試：`src/background/__tests__/webgl-lifecycle.test.js` (jsdom 環境受限，邏輯已覆蓋)。
+
+- **效能 (P2)**  
+  Auto 起始為 **中**；<45 FPS 降級、>58 FPS 穩定後升級（滯後/冷卻）；`visibilitychange` 隱藏時真正停止 RAF；Three.js 動態載入降低首屏阻塞。
+
+- **工作流正確性 (P2)**  
+  執行採拓撲排序 (Kahn)；偵測循環依賴並阻擋；匯入驗證拒絕無效連線/埠/型別，不破壞既有工作流。
+
+## 功能特色
+- DOM 節點 + SVG 貝茲曲線連線 (單一 SVG 層)。節點：Checkpoint Loader、Positive Prompt、Negative Prompt、LoRA Loader、CLIP Text Encode、Empty Latent Image、KSampler、VAE Decode、Output Preview。
+- 拖曳/新增/刪除、連線建立/替換輸入/重接移除、畫布平移/縮放、節點選取與屬性編輯、執行動畫與流動粒子/節點脈衝、參數即時回饋、FLUX/SDXL/SD 1.5 預設、Seed/Steps/CFG 控制、JSON 匯入/匯出、本地儲存/載入、復原/重做。
+- FPS 監控、品質選擇器 (自動/高/中/低)、`prefers-reduced-motion`、RWD、鍵盤快捷鍵。
+
+## CI / 測試
+- PR CI (`.github/workflows/ci.yml`，不含 Pages 部署)：`npm ci`、`npm run build`、`npm test` (Vitest + jsdom)。
+- 涵蓋：JSON 驗證/清理/上限/注入、atomic import/export 往返 + 原子失敗、inspector 即時輸入行為、SVG 安全渲染、拓撲排序/循環偵測、埠型別相容性、連線 ID 唯一性、復原/重做整合。
+
+## 開發
 ```bash
 npm ci
 npm run dev
 ```
-## Build & Test
+## 建置與測試
 ```bash
 npm run build
 npm test
 ```
 
-## Notes
-- FPS results are **not** marked PASS unless measured on the stated device (see `docs/PERFORMANCE.md`).
-- Draft PR; do not merge.
+## 備註
+- FPS 結果**不**標記 PASS，除非在指定裝置實測 (見 `docs/PERFORMANCE.md`)。
+- Draft PR；請勿合併。

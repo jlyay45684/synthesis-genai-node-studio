@@ -1,41 +1,41 @@
-﻿# Architecture (v0.3)
+﻿# 架構文件 (v0.3)
 
-## Overview
-SYNTHESIS is a client-side, simulation-only GenAI node studio. No backend, no ComfyUI connection, no real model execution.
+## 概覽
+SYNTHESIS 為純客戶端、僅模擬的 GenAI 節點工作站。無後端、不連接 ComfyUI、不執行真實模型。
 
-## Rendering Responsibilities
-- **Three.js (`src/background/particles.js`)**: low-density particle cloud background only (Points + BufferGeometry). Adapts particle count/DPR by quality; pauses on hidden tab; respects reduced motion. Dynamic import reduces initial bundle blocking.
-- **DOM (`src/editor/Editor.js`)**: node cards (headers, ports, parameter fields) positioned via CSS transforms/absolute layout inside a transformed world container for pan/zoom.
-- **SVG (`#connections`)**: single SVG layer for all Bézier links (`path` per link) and transient flow dots during execution. No per-link animation loops; flow uses on-demand GSAP tweens.
-- **CSS**: glass panels, neon theme, 3D-depth cues, responsive layout.
+## 渲染職責
+- **Three.js (`src/background/particles.js`)**：僅負責低密度粒子雲背景 (Points + BufferGeometry)。依品質調整粒子數/DPR；分頁隱藏暫停；支援 reduced motion。動態匯入降低初始封裝阻塞。
+- **DOM (`src/editor/Editor.js`)**：節點卡片 (標題、埠、參數欄位) 以 CSS transform/absolute 定位於可平移縮放的世界容器內。
+- **SVG (`#connections`)**：單一 SVG 層承載所有貝茲曲線連線 (`path` per link) 與執行時的暫態流動粒子。無逐連線動畫迴圈；流動效果以按需 GSAP tween 實現。
+- **CSS**：玻璃面板、霓虹主題、3D 深度線索、響應式佈局。
 
-## Editor Model
-- Nodes stored in a Map with `{id,type,x,y,data,def,el}`; links as `{id,fromNode,fromPort,toNode,toPort}`.
-- Port positions resolved from DOM rects mapped into world coordinates for accurate SVG paths under pan/zoom.
-- Input ports accept one link (replace-on-drop); detaching supported by dragging from linked input.
-- Selection drives Inspector binding; parameter edits sync node DOM ↔ inspector and commit history.
-- **Port Types**: every port declares a type (MODEL, CLIP, VAE, CONDITIONING, LATENT, IMAGE). Connection and import validate type compatibility (strict equality).
-- **Link IDs**: unique per workflow; validated on import; rendered via `createElementNS`/`setAttribute`.
+## 編輯器模型
+- 節點以 Map 儲存 `{id,type,x,y,data,def,el}`；連線為 `{id,fromNode,fromPort,toNode,toPort}`。
+- 埠位置由 DOM rect 映射至世界座標，確保平移縮放下 SVG 路徑精準。
+- 輸入埠單一連線 (放開替換)；拖曳已連接的輸入埠可拆離重接。
+- 選取驅動屬性面板綁定；參數編輯同步節點 DOM ↔ inspector 並提交歷史。
+- **埠型別**：每個埠宣告型別 (MODEL, CLIP, VAE, CONDITIONING, LATENT, IMAGE)。連線與匯入驗證型別相容 (嚴格相等)。
+- **連線 ID**：每個工作流唯一；匯入時驗證；以 `createElementNS`/`setAttribute` 渲染。
 
-## State & Persistence
-- Snapshot/restore JSON for undo/redo stack (bounded) and for import/export/local save.
-- Export schema: `version`, `kind: synthesis-workflow-sim`, nodes, links, nextId.
-- **History**: `beginOp/endOp` for single actions; `beginBatch/endBatch` for multi-step ops (e.g., presets). Atomic import: validate fully before replacing state.
+## 狀態與持久化
+- 快照/還原 JSON 供 undo/redo 堆疊 (有上限) 與 import/export/本地儲存使用。
+- 匯出綱要：`version`、`kind: synthesis-workflow-sim`、nodes、links、nextId。
+- **歷史**：`beginOp/endOp` 對應單一動作；`beginBatch/endBatch` 供多步驟操作 (如預設)。Atomic import：完整驗證通過後才替換狀態。
 
-## Execution Simulation
-- Iterates nodes in topological order (Kahn algorithm), detects cycles, pulses outgoing links with GSAP-driven SVG dots, then renders a deterministic canvas preview from sampler parameters. Explicitly labeled simulated.
+## 執行模擬
+- 依拓撲順序 (Kahn 演算法) 疊代節點，偵測循環，脈衝輸出連線 (GSAP 驅動 SVG 點)，再由採樣器參數確性渲染畫布預覽。明確標示模擬。
 
-## Quality & Adaptivity
-- Auto FPS sampling adjusts High/Medium/Low (particles, DPR). Manual override via selector.
-- `prefers-reduced-motion` dampens background and disables flow tweens.
-- Background pauses on `document.hidden` and when canvas not intersecting viewport.
+## 品質與適應性
+- 自動 FPS 採樣調整 High/Medium/Low (粒子數、DPR)。選擇器可手動覆寫。
+- `prefers-reduced-motion` 降低背景動畫並停用流動 tween。
+- 背景在 `document.hidden` 及畫布離開視口時暫停。
 
-## WebGL Lifecycle
-- Three.js dynamically imported (`import("three")`).
-- `WebGLRenderer` init guarded; on failure or `webglcontextlost` → CSS fallback, editor remains operable.
-- `webglcontextrestored` attempts reinitialization.
-- Context event handlers registered once; single RAF loop.
+## WebGL 生命週期
+- Three.js 動態匯入 (`import("three")`)。
+- `WebGLRenderer` 初始化有防護；失敗或 `webglcontextlost` → CSS 降級，編輯器仍可操作。
+- `webglcontextrestored` 嘗試重新初始化。
+- Context 事件處理器只註冊一次；單一 RAF 循環。
 
-## Build/Deploy
-- Vite `base: './'` for Pages. GitHub Actions workflow builds and deploys `dist/`.
-- PR CI (`.github/workflows/ci.yml`): `npm ci`, `npm run build`, `npm test` (Vitest + jsdom). No Pages deploy in PR CI.
+## 建置/部署
+- Vite `base: './'` 供 Pages。GitHub Actions workflow 建置並部署 `dist/`。
+- PR CI (`.github/workflows/ci.yml`)：`npm ci`、`npm run build`、`npm test` (Vitest + jsdom)。PR CI 不含 Pages 部署。

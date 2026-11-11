@@ -12,7 +12,7 @@ function makeEditor() {
 }
 
 describe("Port Type Compatibility", () => {
-  it("getPortType returns correct types", () => {
+  it("getPortType 回傳正確型別", () => {
     expect(getPortType("checkpoint-loader", "model", "out")).toBe("MODEL");
     expect(getPortType("checkpoint-loader", "clip", "out")).toBe("CLIP");
     expect(getPortType("checkpoint-loader", "vae", "out")).toBe("VAE");
@@ -26,7 +26,7 @@ describe("Port Type Compatibility", () => {
     expect(getPortType("output-preview", "image", "in")).toBe("IMAGE");
   });
 
-  it("arePortsCompatible is strict same-type", () => {
+  it("arePortsCompatible 嚴格要求相同型別", () => {
     PORT_TYPES.forEach((t) => expect(arePortsCompatible(t, t)).toBe(true));
     expect(arePortsCompatible("MODEL", "CLIP")).toBe(false);
     expect(arePortsCompatible("CONDITIONING", "LATENT")).toBe(false);
@@ -34,7 +34,7 @@ describe("Port Type Compatibility", () => {
     expect(arePortsCompatible("UNKNOWN", "MODEL")).toBe(false);
   });
 
-  it("validateWorkflow rejects type mismatch", () => {
+  it("validateWorkflow 拒絕型別不相容", () => {
     const wf = {
       kind: KIND, version: VERSION,
       nodes: [
@@ -45,12 +45,12 @@ describe("Port Type Compatibility", () => {
       nextId: 3,
     };
     const r = validateWorkflow(wf);
-    if (!r.ok) console.log("Rejected:", r.error);
+    if (!r.ok) console.log("已拒絕:", r.error);
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/incompatible port types/i);
+    expect(r.error).toMatch(/型別不相容/);
   });
 
-  it("validateWorkflow accepts compatible types", () => {
+  it("validateWorkflow 接受相容型別", () => {
     const wf = {
       kind: KIND, version: VERSION,
       nodes: [
@@ -68,7 +68,7 @@ describe("Port Type Compatibility", () => {
 });
 
 describe("Link ID Uniqueness", () => {
-  it("rejects duplicate link IDs", () => {
+  it("拒絕重複連線 ID", () => {
     const wf = {
       kind: KIND, version: VERSION,
       nodes: [
@@ -84,7 +84,7 @@ describe("Link ID Uniqueness", () => {
     expect(validateWorkflow(wf).ok).toBe(false);
   });
 
-  it("Editor renders links with unique data-id attributes", () => {
+  it("Editor 以唯一 data-id 渲染連線", () => {
     const ed = makeEditor();
     const a = ed.addNode("checkpoint-loader", 0, 0);
     const b = ed.addNode("ksampler", 200, 0);

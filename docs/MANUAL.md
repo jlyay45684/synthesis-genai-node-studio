@@ -1,44 +1,44 @@
-﻿# SYNTHESIS — Operation Manual
+﻿# SYNTHESIS — 操作手冊
 
-## Overview
-SYNTHESIS is a **simulation-only** GenAI node editor inspired by ComfyUI workflows. It does not connect to ComfyUI or run real models.
+## 概覽
+SYNTHESIS 為**僅模擬**的 GenAI 節點編輯器，靈感來源於 ComfyUI 工作流。**不連接 ComfyUI，不執行真實模型。**
 
-## Interface
-- **Top bar:** brand, preset selector, Run (Sim), add/undo/redo/save/load/export/import, FPS monitor, quality selector.
-- **Canvas:** DOM nodes over a Three.js particle background with SVG Bézier links. Pan/zoom for spatial navigation.
-- **Inspector (right):** edit selected node parameters; view simulated output preview; control reference.
+## 介面說明
+- **頂列**：品牌、預設選單、執行 (模擬)、新增/復原/重做/儲存/載入/匯出/匯入、FPS 監控、品質選擇器。
+- **畫布**：DOM 節點疊加於 Three.js 粒子背景與 SVG 貝茲曲線連線之上。支援平移/縮放進行空間導航。
+- **屬性面板 (右側)**：編輯選取節點參數；檢視模擬輸出預覽；操作說明參考。
 
-## Building a Workflow
-1. **Add nodes:** click `＋ Node` and choose a type (or load a preset).
-2. **Move nodes:** drag node headers.
-3. **Connect:** drag from an output port dot to a compatible input port dot. Each input accepts one link (dropping replaces the existing one).
-4. **Rewire/remove link:** drag from a linked input port to detach and drop on a new input; deleting a node removes its links.
-5. **Edit parameters:** select a node and change fields in-node or in Inspector (Seed/Steps/CFG, dimensions, prompts, LoRA, sampler, etc.). Changes apply immediately.
-6. **Delete:** select a node and press `Delete`/`Backspace` (not while typing in fields).
+## 建立工作流
+1. **新增節點**：點選 `＋ 節點` 選擇類型 (或載入預設)。
+2. **移動節點**：拖曳節點標題列。
+3. **建立連線**：從輸出埠點拖曳至相容的輸入埠點。每個輸入埠僅接受一條連線 (放開替換既有連線)。
+4. **重接/移除連線**：從已連接的輸入埠拖曳以拆離，再放開於目標輸入埠；刪除節點會同時移除其連線。
+5. **編輯參數**：選取節點後在節點內或屬性面板修改欄位 (Seed/Steps/CFG、尺寸、提示詞、LoRA、採樣器等)。修改即時生效。
+6. **刪除**：選取節點後按 `Delete`/`Backspace` (輸入欄位聚焦時不生效)。
 
-## Presets
-Use the **Presets** menu to load FLUX, SDXL, or SD 1.5 graphs preconfigured with Checkpoint, prompts, latent size, KSampler, VAE Decode, and Output Preview. Presets are editable and exportable.
+## 預設
+使用 **預設** 選單載入 FLUX、SDXL、SD 1.5 圖表，預設包含 Checkpoint、提示詞、潛空間尺寸、KSampler、VAE Decode、Output Preview。預設可編輯並匯出。
 
-## Execution (Simulated)
-Click **Run (Sim)** or press `Ctrl+Enter`. Nodes animate through running/done states and flow particles travel along SVG links. The Output Preview renders a deterministic **simulated** image canvas derived from sampler settings (e.g. seed) — **no ComfyUI, no model inference**.
+## 執行 (模擬)
+點選 **執行 (模擬)** 或按 `Ctrl+Enter`。節點依序呈現 running/done 狀態，流動粒子沿 SVG 連線移動。Output Preview 依採樣器設定 (如 seed) 繪製**確定性模擬**畫布 — **不連接 ComfyUI，無模型推論**。
 
-## Save / Load / JSON
-- **Save/Load:** stores workflow in browser localStorage.
-- **Export:** downloads versioned JSON (`synthesis-workflow-sim`).
-- **Import:** loads a JSON workflow file.
-Round-trip: export then import restores nodes, positions, parameters, and links.
+## 儲存 / 載入 / JSON
+- **儲存/載入**：將工作流存入瀏覽器 localStorage。
+- **匯出**：下載版本化 JSON (`synthesis-workflow-sim`)。
+- **匯入**：載入 JSON 工作流檔案。
+往返驗證：匯出再匯入可還原節點、位置、參數、連線。
 
-## History
-Undo/Redo via buttons or `Ctrl+Z` / `Ctrl+Y` (`Ctrl+Shift+Z`). History captures structural and committed parameter changes.
+## 歷史記錄
+透過按鈕或 `Ctrl+Z` / `Ctrl+Y` (`Ctrl+Shift+Z`) 復原/重做。歷史記錄捕捉結構變更與提交的參數修改。
 
-## Performance & Accessibility
-- Quality: Auto/High/Medium/Low adjusts background particle count and DPR.
-- FPS monitor shown in top bar.
-- Respects `prefers-reduced-motion` (reduced background/flow animation).
-- Responsive layout: inspector stacks below canvas on small screens.
-- Keyboard accessible toolbar and shortcuts (see README).
+## 效能與無障礙
+- 品質：Auto/High/Medium/Low 調整背景粒子數與 DPR。
+- 頂列顯示 FPS 監控。
+- 尊重 `prefers-reduced-motion` (降低背景/流動動畫)。
+- 響應式佈局：窄螢幕時屬性面板堆疊於畫布下方。
+- 工具列與快捷鍵具備鍵盤無障礙操作 (見 README)。
 
-## Troubleshooting
-- **No preview:** click Run (Sim); ensure Output Preview node exists in graph.
-- **Import fails:** verify JSON is a SYNTHESIS workflow export.
-- **Slow on low-end devices:** set Quality to Low and/or enable reduced motion in OS.
+## 疑難排解
+- **無預覽**：點選執行 (模擬)；確認圖中存在 Output Preview 節點。
+- **匯入失敗**：確認 JSON 為 SYNTHESIS 工作流匯出格式。
+- **低階裝置卡頓**：將品質設為低、或於系統開啟 reduced motion。

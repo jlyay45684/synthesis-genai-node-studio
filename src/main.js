@@ -20,7 +20,7 @@ bg.onFps = (fps) => {
   fpsEl.textContent = `${fps.toFixed(0)} FPS`;
 };
 bg.onQuality = (q, mode, dir) => {
-  if (dir) toast(`Auto quality ${dir === "down" ? "↓" : "↑"} ${q}`);
+  if (dir) toast(`自動品質 ${dir === "down" ? "↓" : "↑"} ${q}`);
 };
 bg.onError = (msg) => {
   toast(msg);
@@ -30,7 +30,7 @@ bg.init();
 qualitySel.addEventListener("change", (e) => {
   const mode = e.target.value;
   bg.setMode(mode);
-  toast(mode === "auto" ? "Quality: Auto (starts Medium)" : `Quality: ${mode}`);
+  toast(mode === "auto" ? "品質：自動 (起始為中)" : `品質：${mode}`);
 });
 
 const wrap = $("#canvas-wrap");
@@ -47,7 +47,7 @@ const editor = new Editor({
 inspector = setupInspector(editor, $("#inspector-body"));
 setupAddMenu(editor, $("#add-menu"), $("#btn-add"), wrap);
 
-// pan/zoom
+// 平移/縮放
 let panning = false,
   panStart = null,
   space = false;
@@ -96,28 +96,28 @@ window.addEventListener("keyup", (e) => {
   if (e.code === "Space") space = false;
 });
 
-// toolbar actions
+// 工具列動作
 $("#btn-undo").addEventListener("click", () => {
   editor.undo();
-  toast("Undo");
+  toast("已復原");
 });
 $("#btn-redo").addEventListener("click", () => {
   editor.redo();
-  toast("Redo");
+  toast("已重做");
 });
 $("#btn-run").addEventListener("click", async () => {
   try {
-    toast("Running workflow (Simulation)…");
+    toast("正在執行工作流 (模擬)…");
     await editor.runSimulation((canvas) => {
       const box = $("#preview-box");
       box.innerHTML = "";
       box.appendChild(canvas);
       gsap.fromTo(canvas, { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.4 });
     });
-    toast("Simulation complete — preview generated");
+    toast("模擬完成 — 預覽已產生");
   } catch (e) {
-    if (e && e.message === "CYCLE") toast("Cannot run: cycle detected in workflow");
-    else toast("Run failed (simulation)");
+    if (e && e.message === "CYCLE") toast("無法執行：偵測到工作流循環依賴");
+    else toast("執行失敗 (模擬)");
   }
 });
 $("#preset-select").addEventListener("change", (e) => {
@@ -126,7 +126,7 @@ $("#preset-select").addEventListener("change", (e) => {
     editor.loadPreset(p);
     editor.setPan(40, 40);
     editor.setScale(0.9);
-    toast(`Preset loaded: ${p.name}`);
+    toast(`已載入預設：${p.name}`);
   }
   e.target.value = "";
 });
@@ -137,27 +137,27 @@ $("#import-file").addEventListener("change", async (e) => {
   if (!f) return;
   try {
     editor.importJSON(await f.text());
-    toast("Workflow imported");
+    toast("工作流已匯入");
   } catch (err) {
-    toast(`Import rejected: ${err?.message || "invalid workflow"}`);
+    toast(`匯入被拒：${err?.message || "無效的工作流"}`);
   }
   e.target.value = "";
 });
 $("#btn-save").addEventListener("click", () => {
   localStorage.setItem("synthesis-workflow", editor.exportJSON());
-  toast("Workflow saved (local)");
+  toast("工作流已儲存 (本地)");
 });
 $("#btn-load").addEventListener("click", () => {
   const s = localStorage.getItem("synthesis-workflow");
   if (!s) {
-    toast("No saved workflow");
+    toast("無儲存的工作流");
     return;
   }
   try {
     editor.importJSON(s);
-    toast("Workflow loaded");
+    toast("工作流已載入");
   } catch (err) {
-    toast(`Load failed: ${err?.message || "invalid"}`);
+    toast(`載入失敗：${err?.message || "無效"}`);
   }
 });
 
@@ -167,11 +167,11 @@ window.addEventListener("keydown", (e) => {
   if (mod && e.key.toLowerCase() === "z") {
     e.preventDefault();
     editor.undo();
-    toast("Undo");
+    toast("已復原");
   } else if (mod && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) {
     e.preventDefault();
     editor.redo();
-    toast("Redo");
+    toast("已重做");
   } else if (mod && e.key.toLowerCase() === "s") {
     e.preventDefault();
     $("#btn-save").click();
@@ -194,7 +194,7 @@ function download(name, text) {
   URL.revokeObjectURL(a.href);
 }
 
-// initial preset
+// 初始預設
 editor.loadPreset(PRESETS.flux);
 editor.setScale(0.85);
-toast("SYNTHESIS ready — Simulation only, no ComfyUI");
+toast("SYNTHESIS 就緒 — 僅模擬，未連接 ComfyUI");

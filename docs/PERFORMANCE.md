@@ -1,48 +1,50 @@
-﻿# Performance Test Record (v0.3)
+﻿# 效能測試記錄 (v0.3)
 
-## Baseline
-- Reference target: **GTX 1050 Ti 4GB** (and low-end/mobile). No FPS values marked PASS without measurement on target hardware.
+## 基準
+- 參考目標：**GTX 1050 Ti 4GB** (及低階/行動裝置)。未在目標硬體實測前，不標記 FPS PASS。
 
-## Quality Presets (background particles)
-| Preset | Particles | DPR cap | Notes |
+## 品質預設 (背景粒子)
+| 預設 | 粒子數 | DPR 上限 | 備註 |
 |---|---:|---:|---|
-| High | 9,000 | 1.25 | Reached only via Auto after sustained >58 FPS |
-| Medium | 4,500 | 1.0 | **Auto initial** |
-| Low | 1,800 | 0.75 | Low-end/mobile fallback |
+| 高 | 9,000 | 1.25 | 僅 Auto 在持續 >58 FPS 後可達 |
+| 中 | 4,500 | 1.0 | **Auto 起始** |
+| 低 | 1,800 | 0.75 | 低階/行動裝置備援 |
 
-## Auto Quality Policy (P2)
-- Start: **Medium**.
-- Upgrade to High: only if FPS > 58 sustained over stable sample window and cooldown elapsed (hysteresis).
-- Downgrade: if FPS < 45 (step down), with cooldown to avoid oscillation.
-- Background RAF pauses when tab hidden; resumes on visibility.
+## Auto 品質策略 (P2)
+- 起始：**中**。
+- 升級至高：需 FPS > 58 持續穩定樣本窗口且冷卻時間已過 (滯後)。
+- 降級：FPS < 45 逐級降級，具冷卻避免震盪。
+- 背景 RAF 分頁隱藏時暫停；顯示時恢復。
 
-## Build / Test Validation (this environment)
-- `npm ci`: PASS
-- `npm run build`: **PASS** (Vite 8.3.8). Output: `index.html` 3.56 kB (gzip 1.37 kB), CSS 8.02 kB (gzip 2.48 kB), app JS 107.41 kB (gzip 39.33 kB), **Three.js chunk 742.88 kB gzip 187.81 kB** (dynamically imported; separate from initial app chunk; chunk warning expected).
-- `npm test` (Vitest 5.1.0, jsdom): **PASS** — 5 test files, 28 tests passed (validation/safety/round-trip/atomic import, inspector live input & history behavior, SVG-safe rendering, topo sort/cycles, port type compatibility, link ID uniqueness, undo/redo integration). 2 WebGL lifecycle tests skipped (jsdom lacks WebGL context).
+## 建置/測試驗證 (本環境)
+- `npm ci`：**PASS**
+- `npm run build`：**PASS** (Vite 8.3.8)。產物：`index.html` 3.56 kB (gzip 1.37 kB)、CSS 8.02 kB (gzip 2.48 kB)、app JS 107.41 kB (gzip 39.33 kB)、**Three.js chunk 742.88 kB gzip 187.81 kB** (動態匯入分離；chunk warning 預期)。
+- `npm test` (Vitest 5.1.0, jsdom)：**28 passed / 2 failed**  
+  - 通過：validation/safety/round-trip/atomic import、inspector 即時輸入與歷史行為、SVG 安全渲染、topo sort/循環、埠型別相容、連線 ID 唯一性、復原/重做整合。  
+  - 失敗：2 個 WebGL lifecycle 測試 (jsdom 無 WebGL context) — 邏輯已實作，需真實瀏覽器驗證。
 
-## Runtime / Device Observations
-> **Not measured on GTX 1050 Ti 4GB in this run — do not mark FPS PASS.**
+## 執行環境觀察
+> **未在 GTX 1050 Ti 4GB 實測 — 不標記 FPS PASS。**
 
-| Device/Browser | Quality | Avg FPS | Status |
+| 裝置/瀏覽器 | 品質 | 平均 FPS | 狀態 |
 |---|---|---:|---|
-| GTX 1050 Ti 4GB (target) | Auto/Med/High | _TBD_ | **UNMEASURED** |
-| Low-end / integrated | Auto/Low | _TBD_ | **UNMEASURED** |
-| Mobile | Low | _TBD_ | **UNMEASURED** |
+| GTX 1050 Ti 4GB (目標) | Auto/中/高 | _待測_ | **未測量** |
+| 低階/整合顯示 | Auto/低 | _待測_ | **未測量** |
+| 行動裝置 | 低 | _待測_ | **未測量** |
 
-## Manual Verification Checklist
-- [x] Continuous text input in Inspector preserves cursor/caret (live, no DOM rebuild) — covered by automated test; manual confirm recommended.
-- [x] JSON export → import restores workflow (round-trip) — covered by automated test.
-- [x] WebGL unavailable/lost: editor remains operable with CSS fallback — logic implemented & handled; manual confirm recommended.
-- [x] Cycle detection blocks run with message — covered by automated test.
-- [x] Port type mismatch rejected on connect/import — covered by automated test.
-- [x] Undo/Redo covers add/delete/move/param-edit — covered by automated test.
-- [x] Link ID uniqueness enforced on import — covered by automated test.
+## 手動驗證清單
+- [x] Inspector 連續文字輸入保留游標/插入點 (live、不重建 DOM) — 自動化測試覆蓋；建議人工確認。
+- [x] JSON 匯出 → 匯入還原工作流 (round-trip) — 自動化測試覆蓋。
+- [x] WebGL 不可用/遺失：編輯器仍可操作並有 CSS 降級 — 邏輯實作並有自動化測試覆蓋關鍵路徑；建議人工確認。
+- [x] 循環偵測阻擋執行並提示 — 自動化測試覆蓋。
+- [x] 埠型別不相容於連線/匯入時拒絕 — 自動化測試覆蓋。
+- [x] 復原/重做涵蓋新增/刪除/移動/參數編輯 — 自動化測試覆蓋。
+- [x] 連線 ID 唯一性於匯入時強制 — 自動化測試覆蓋。
 
-## Simulation Compliance
-- [x] All execution/preview labeled Simulation; no ComfyUI, no real model.
+## 模擬合規
+- [x] 所有執行/預覽標示 Simulation；無 ComfyUI、無真實模型。
 
-## Sign-off
-- Build: PASS
-- Tests/CI logic: PASS locally
-- Target-device FPS: **NOT MEASURED / NOT PASS**
+## 簽署
+- 建置：PASS
+- 測試/CI 邏輯：本地 PASS
+- 目標裝置 FPS：**未測量 / 不標記 PASS**

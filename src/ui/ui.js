@@ -5,14 +5,14 @@ export function setupInspector(editor, container) {
   let inputs = new Map();
 
   function clear() {
-    container.innerHTML = '<p class="muted">Select a node to edit parameters. <br><b>Simulation only</b> — no ComfyUI/model execution.</p>';
+    container.innerHTML = '<p class="muted">選取節點以編輯參數。 <br><b>僅模擬</b> — 未連接 ComfyUI / 無真實模型執行。</p>';
     inputs.clear();
     currentId = null;
   }
 
   function build(node) {
     const def = node.def;
-    let html = `<div class="ins-field"><b style="color:var(--ink)">${def.title}</b><div class="muted">Type: ${node.type}</div></div>`;
+    let html = `<div class="ins-field"><b style="color:var(--ink)">${def.title}</b><div class="muted">類型：${node.type}</div></div>`;
     def.fields.forEach((f) => {
       const v = node.data[f.k];
       const label = esc(f.label);
@@ -22,7 +22,7 @@ export function setupInspector(editor, container) {
         html += `<label class="ins-field">${label}<select data-ik="${f.k}">${f.options.map((o) => `<option value="${esc(o)}" ${o == v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`;
       else html += `<label class="ins-field">${label}<input data-ik="${f.k}" type="${f.type || "text"}" value="${esc(v)}" ${f.min != null ? `min="${f.min}"` : ""} ${f.max != null ? `max="${f.max}"` : ""} ${f.step != null ? `step="${f.step}"` : ""}></label>`;
     });
-    html += `<div class="muted" style="margin-top:6px">Ports in: ${def.inputs.map((p) => esc(p.label)).join(", ") || "—"} · out: ${def.outputs.map((p) => esc(p.label)).join(", ") || "—"}</div>`;
+    html += `<div class="muted" style="margin-top:6px">輸入埠：${def.inputs.map((p) => esc(p.label)).join(", ") || "—"} · 輸出埠：${def.outputs.map((p) => esc(p.label)).join(", ") || "—"}</div>`;
     container.innerHTML = html;
     inputs = new Map();
     container.querySelectorAll("[data-ik]").forEach((inp) => {
@@ -77,7 +77,7 @@ function esc(s) {
 }
 
 export function setupAddMenu(editor, menuEl, anchorBtn, wrapEl) {
-  menuEl.innerHTML = `<h4>ADD NODE</h4>` + Object.entries(NODE_TYPES).map(([k, v]) => `<button data-type="${k}">${v.title}</button>`).join("");
+  menuEl.innerHTML = `<h4>新增節點</h4>` + Object.entries(NODE_TYPES).map(([k, v]) => `<button data-type="${k}">${v.title}</button>`).join("");
   const hide = () => menuEl.classList.add("hidden");
   anchorBtn.addEventListener("click", () => {
     const r = anchorBtn.getBoundingClientRect();
