@@ -1,0 +1,63 @@
+﻿<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>SYNTHESIS — GenAI 節點工作站</title>
+</head>
+<body>
+  <div id="app">
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+    <header id="topbar">
+      <div class="brand"><span class="glyph">⬡</span><div><b>SYNTHESIS</b><small>GenAI 節點工作站 · <span class="sim-tag">模擬預覽</span></small></div></div>
+      <div class="toolbar" role="toolbar" aria-label="編輯器工具列">
+        <select id="preset-select" aria-label="工作流預設"><option value="">預設</option><option value="flux">FLUX</option><option value="sdxl">SDXL</option><option value="sd15">SD 1.5</option></select>
+        <button id="btn-run" class="btn primary" title="執行工作流 (Ctrl+Enter)">▶ 執行 (模擬)</button>
+        <button id="btn-add" class="btn" title="新增節點">＋ 節點</button>
+        <button id="btn-undo" class="btn" title="復原 (Ctrl+Z)">↶</button>
+        <button id="btn-redo" class="btn" title="重做 (Ctrl+Y)">↷</button>
+        <button id="btn-save" class="btn" title="儲存工作流">儲存</button>
+        <button id="btn-load" class="btn" title="載入工作流">載入</button>
+        <button id="btn-export" class="btn" title="匯出 JSON">匯出</button>
+        <button id="btn-import" class="btn" title="匯入 JSON">匯入</button>
+        <input type="file" id="import-file" accept="application/json" hidden />
+      </div>
+      <div class="statusbar">
+        <span id="fps" class="pill">-- FPS</span>
+        <label class="pill">品質<select id="quality"><option value="auto">自動</option><option value="high">高</option><option value="medium">中</option><option value="low">低</option></select></label>
+      </div>
+    </header>
+    <main id="workspace">
+      <div id="canvas-wrap" tabindex="0" aria-label="節點畫布。空白鍵+拖曳平移，滾輪縮放">
+        <div id="world">
+          <svg id="connections" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="nodes"></div>
+        </div>
+      </div>
+      <aside id="inspector" aria-label="屬性面板">
+        <h2>屬性面板</h2>
+        <div id="inspector-body"><p class="muted">選取節點以編輯參數。 <br><b>僅模擬</b> — 未連接 ComfyUI / 無真實模型執行。</p></div>
+        <div class="ins-section">
+          <h3>輸出預覽 <span class="sim-badge">模擬</span></h3>
+          <div id="preview-box" class="preview-box"><div class="preview-placeholder">執行工作流以產生模擬預覽</div></div>
+        </div>
+        <div class="ins-section">
+          <h3>操作說明</h3>
+          <ul class="help-list">
+            <li><kbd>Del</kbd> 刪除選取節點</li>
+            <li><kbd>Ctrl+Z/Y</kbd> 復原/重做</li>
+            <li><kbd>Ctrl+S</kbd> 儲存 · <kbd>Ctrl+E</kbd> 匯出</li>
+            <li><kbd>Ctrl+Enter</kbd> 執行模擬</li>
+            <li>拖曳連接埠建立連線 · 放開於輸入埠以連接</li>
+            <li>滾輪縮放 · 空白鍵/中鍵+拖曳平移</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+    <div id="add-menu" class="add-menu hidden" role="menu" aria-label="新增節點"></div>
+    <div id="toast" class="toast" aria-live="polite"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
